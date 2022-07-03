@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.function.UnaryOperator;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -23,15 +24,17 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
+import javafx.scene.control.TextFormatter.Change;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.util.converter.IntegerStringConverter;
 
 /**
  *
@@ -105,7 +108,7 @@ public class main extends Application {
             ruangan.set(fRuangan);
         }
     }
-    
+
     private TableView table = new TableView();
 
     @Override
@@ -133,7 +136,7 @@ public class main extends Application {
         TableColumn gkbC = new TableColumn("GKB");
         TableColumn waktuC = new TableColumn("Waktu");
         TableColumn ruanganC = new TableColumn("Ruangan");
-        final ComboBox gkbBox = new ComboBox(gkbList);
+//        final ComboBox gkbBox = new ComboBox(gkbList);
         table.getColumns().addAll(idC, namaC, matkulC, gkbC, waktuC, ruanganC);
         final VBox vbox = new VBox();
         final HBox hbox = new HBox();
@@ -157,16 +160,18 @@ public class main extends Application {
             Connection conn = koneksi.koneksi.koneksiDB();
             PreparedStatement pst = conn.prepareStatement(sql);
             ResultSet rs = pst.executeQuery();
+            int index = 1;
             while (rs.next()) {
-                int id = rs.getInt("id");
+//                int id = rs.getInt("id");                
                 String nama = rs.getString("nama_dosen");
                 String matkul = rs.getString("mata_kuliah");
 //                String gkb = rs.getString("gkb");
                 int gkb = rs.getInt("gkb");
                 String waktu = rs.getString("waktu");
                 String ruangan = rs.getString("ruangan");
-                Jadwal jd = new Jadwal(String.valueOf(id), nama, matkul, String.valueOf(gkb), waktu, ruangan);
+                Jadwal jd = new Jadwal(String.valueOf(index), nama, matkul, String.valueOf(gkb), waktu, ruangan);
                 data.add(jd);
+                index++;
             }
         } catch (SQLException e) {
             System.out.println(e);
@@ -215,9 +220,20 @@ public class main extends Application {
 
             Label gkb = new Label("GKB: ");
             grid.add(gkb, 0, 2);
-            gkbBox.getSelectionModel().select(0);
-            grid.add(gkbBox, 1, 2);
+            TextField gkbT = new TextField();
+            grid.add(gkbT, 1, 2);
 
+            UnaryOperator<Change> integerFilter = change -> {
+                String newText = change.getControlNewText();
+                if (newText.matches("-?([1-9][0-9]*)?")) {
+                    return change;
+                }
+                return null;
+            };
+
+            gkbT.setTextFormatter(new TextFormatter<>(new IntegerStringConverter(), 0, integerFilter));
+//            gkbBox.getSelectionModel().select(0);
+//            grid.add(gkbBox, 1, 2);
             Label waktu = new Label("Waktu: ");
             grid.add(waktu, 0, 3);
             TextField waktuT = new TextField();
@@ -248,7 +264,8 @@ public class main extends Application {
                     try {
                         String namadosen = namaT.getText();
                         String matakuliah = matkulT.getText();
-                        String gkbb = gkbBox.getSelectionModel().getSelectedItem().toString();
+//                        String gkbb = gkbBox.getSelectionModel().getSelectedItem().toString();
+                        String gkbb = gkbT.getText();
                         String waktuu = waktuT.getText();
                         String ruang = ruanganT.getText();
                         String sqlT = "INSERT INTO jadwal (nama_dosen, mata_kuliah, gkb, waktu, ruangan) VALUES ('" + namadosen + "',  '" + matakuliah + "', '" + gkbb + "', '" + waktuu + "', '" + ruang + "')";
@@ -327,8 +344,18 @@ public class main extends Application {
 
                 Label gkb = new Label("GKB: ");
                 grid.add(gkb, 0, 2);
-                gkbBox.getSelectionModel().select(0);
-                grid.add(gkbBox, 1, 2);
+                TextField gkbT = new TextField();
+                gkbT.setText(jadwal.getGKB());
+                UnaryOperator<Change> integerFilter = change -> {
+                    String newText = change.getControlNewText();
+                    if (newText.matches("-?([1-9][0-9]*)?")) {
+                        return change;
+                    }
+                    return null;
+                };
+                gkbT.setTextFormatter(new TextFormatter<>(new IntegerStringConverter(), 0, integerFilter));
+//                gkbBox.getSelectionModel().select(0);
+                grid.add(gkbT, 1, 2);
 
                 Label waktu = new Label("Waktu: ");
                 grid.add(waktu, 0, 3);
@@ -355,7 +382,7 @@ public class main extends Application {
 
                 btnT.setOnAction((ActionEvent eT) -> {
                     try {
-                        String sql = "UPDATE jadwal SET nama_dosen = '" + namaT.getText() + "', mata_kuliah = '" + matkulT.getText() + "', gkb = '" + gkbBox.getSelectionModel().getSelectedItem().toString() + "', waktu = '" + waktuT.getText() + "', ruangan = '" + ruanganT.getText() + "' WHERE id = " + index + "";
+                        String sql = "UPDATE jadwal SET nama_dosen = '" + namaT.getText() + "', mata_kuliah = '" + matkulT.getText() + "', gkb = '" + gkbT.getText() + "', waktu = '" + waktuT.getText() + "', ruangan = '" + ruanganT.getText() + "' WHERE id = " + index + "";
                         Connection conn = koneksi.koneksi.koneksiDB();
                         PreparedStatement pst = conn.prepareStatement(sql);
                         pst.execute();
@@ -394,7 +421,7 @@ public class main extends Application {
             konfirm.showAndWait();
             if (konfirm.getResult() == ButtonType.YES) {
                 try {
-                    String sql = "DELETE FROM jadwal WHERE id = '"+index+"'";
+                    String sql = "DELETE FROM jadwal WHERE id = '" + index + "'";
                     Connection conn = koneksi.koneksi.koneksiDB();
                     PreparedStatement pst = conn.prepareStatement(sql);
                     pst.execute();
